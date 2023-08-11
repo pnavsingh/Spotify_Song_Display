@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spotify Web Playback SDK Quick Start</title>
+</head>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5; /* Gray background color */
+        margin: 0;
+        padding: 0;
+    }
+    h1 {
+        text-align: center;
+        margin-top: 20px;
+        color: #333;
+    }
+    ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+    li {
+        margin: 10px 0;
+    }
+    a {
+        text-decoration: none;
+        color: #0070e0;
+        transition: color 0.3s ease-in-out;
+        font-weight: bold; /* Bold font */
+    }
+    a:hover {
+        color: #004080;
+    }
+    #playlist {
+        text-align: center;
+    }
+    #togglePlay {
+        display: block;
+        margin: 20px auto;
+        padding: 10px 20px;
+        background-color: #0070e0;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease-in-out;
+    }
+    #togglePlay:hover {
+        background-color: #004080;
+    }
+</style>
+
+<body>
+    <h1>Pranav Spotify Web Playback 100 songs</h1>
+
+    
+    
+    <!-- Display the list of songs -->
+    <ul id="playlist">
+        {% for num, track in tracks.items() %}
+            <li>
+                <a href="#" onclick="playSong('{{ track.track.uri }}');">{{ num }}. {{ track.track.name }} - {{ track.track.artists[0].name }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <button id="togglePlay">Toggle Play</button>
+
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script>
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            const token = '{{ token }}'; // Replace with the actual access token passed from Flask
+            const player = new Spotify.Player({
+                name: 'Web Playback SDK Quick Start Player',
+                getOAuthToken: cb => { cb(token); },
+                volume: 0.5
+            });
+            // Ready
+            player.addListener('ready', ({ device_id }) => {
+                console.log('Ready with Device ID', device_id);
+            });
+
+            // Not Ready
+            player.addListener('not_ready', ({ device_id }) => {
+                console.log('Device ID has gone offline', device_id);
+            });
+
+            // Initialization error
+            player.addListener('initialization_error', ({ message }) => {
+                console.error('Initialization error:', message);
+            });
+
+            // Authentication error
+            player.addListener('authentication_error', ({ message }) => {
+                console.error('Authentication error:', message);
+            });
+
+            // Account error
+            player.addListener('account_error', ({ message }) => {
+                console.error('Account error:', message);
+            });
+            // ... Your existing player event listeners and setup code ...
+
+            player.connect();
+        }
+
+        // Function to play a specific song
+        function playSong(uri) {
+            // Check if playback devices are available
+            fetch('https://api.spotify.com/v1/me/player/devices', {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const devices = data.devices;
+                if (devices.length === 0) {
+                    console.log('No active playback devices available.');
+                    return;
+                }
+                
+                // Test playback on the first available device
+                const device_id = 'a256014e8518ae9e2f37a5270f2ca8dcb7aec221';
+                fetch(`https://api.spotify.com/v1/me/player/play?device_id=+ ${device_id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        uris: [uri],
+                    }),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
